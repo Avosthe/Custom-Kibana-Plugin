@@ -4,7 +4,9 @@ import {
     EuiTitle,
     EuiText,
     EuiSpacer,
-  } from '@elastic/eui'
+  } from '@elastic/eui';
+import FirewallConfiguration from "./FirewallConfiguration";
+
 
 export class CustomNavigation extends Component {
 
@@ -18,16 +20,7 @@ export class CustomNavigation extends Component {
               content: (
                 <Fragment>
                   <EuiSpacer />
-                  <EuiTitle>
-                    <h3>Firewall Configuration</h3>
-                  </EuiTitle>
-                  <EuiText>
-                    Cobalt is a chemical element with symbol Co and atomic number 27.
-                    Like nickel, cobalt is found in the Earth&rsquo;s crust only in
-                    chemically combined form, save for small deposits found in alloys
-                    of natural meteoric iron. The free element, produced by reductive
-                    smelting, is a hard, lustrous, silver-gray metal.
-                  </EuiText>
+                  <FirewallConfiguration />
                 </Fragment>
               ),
             },
@@ -40,10 +33,9 @@ export class CustomNavigation extends Component {
                   <EuiTitle>
                     <h3>Alerts Panel</h3>
                   </EuiTitle>
+                  <EuiSpacer />
                   <EuiText>
-                    Intravenous sugar solution, also known as dextrose solution, is a
-                    mixture of dextrose (glucose) and water. It is used to treat low
-                    blood sugar or water loss without electrolyte loss.
+                    This tab will display all the security alerts generated with our custom micro-service.
                   </EuiText>
                 </Fragment>
               ),
@@ -57,10 +49,9 @@ export class CustomNavigation extends Component {
                   <EuiTitle>
                     <h3>Notification Setup</h3>
                   </EuiTitle>
+                  <EuiSpacer />
                   <EuiText>
-                    Hydrogen is a chemical element with symbol H and atomic number 1.
-                    With a standard atomic weight of 1.008, hydrogen is the lightest
-                    element on the periodic table
+                    This tab allows network administrators to configure the communication vectors when a security alert is being generated.
                   </EuiText>
                 </Fragment>
               ),
@@ -74,11 +65,9 @@ export class CustomNavigation extends Component {
                   <EuiTitle>
                     <h3>Firewall Control</h3>
                   </EuiTitle>
+                  <EuiSpacer />
                   <EuiText>
-                    Monosodium glutamate (MSG, also known as sodium glutamate) is the
-                    sodium salt of glutamic acid, one of the most abundant naturally
-                    occurring non-essential amino acids. Monosodium glutamate is found
-                    naturally in tomatoes, cheese and other foods.
+                    This tab allows network administrators to possess control over some core features of their Firewall.
                   </EuiText>
                 </Fragment>
               ),
@@ -92,11 +81,9 @@ export class CustomNavigation extends Component {
                     <EuiTitle>
                       <h3>Action Logs</h3>
                     </EuiTitle>
+                    <EuiSpacer />
                     <EuiText>
-                      Monosodium glutamate (MSG, also known as sodium glutamate) is the
-                      sodium salt of glutamic acid, one of the most abundant naturally
-                      occurring non-essential amino acids. Monosodium glutamate is found
-                      naturally in tomatoes, cheese and other foods.
+                      This tab contains logs of every action that is performed on the custom Kibana plugin.
                     </EuiText>
                   </Fragment>
                 ),
@@ -108,7 +95,7 @@ export class CustomNavigation extends Component {
         return (
             <EuiTabbedContent
               tabs={this.tabs}
-              initialSelectedTab={this.tabs[1]}
+              initialSelectedTab={this.tabs[0]}
               expand={true}
               onTabClick={tab => {
                 console.log('clicked tab', tab);

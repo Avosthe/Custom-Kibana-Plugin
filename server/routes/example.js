@@ -1,3 +1,5 @@
+
+
 export default function (server) {
 
   server.route({
@@ -7,5 +9,4 @@ export default function (server) {
       return { time: (new Date()).toISOString() };
     }
   });
-
 }
