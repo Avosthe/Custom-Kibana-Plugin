@@ -1,4 +1,8 @@
 import React, { Component, Fragment} from 'react'
+import {
+    EuiSpacer,
+    EuiText
+} from "@elastic/eui";
 
 export class Alert extends Component {
     render() {

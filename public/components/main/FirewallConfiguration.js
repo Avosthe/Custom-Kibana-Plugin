@@ -23,6 +23,7 @@ export class FirewallConfiguration extends Component {
         super(props);
 
         const { httpClient } = this.props;
+        this.httpClient = httpClient;
 
         this.firewallOptions = [
             { value: "palo_alto", text: "Palo Alto Firewall" },
@@ -52,6 +53,12 @@ export class FirewallConfiguration extends Component {
         this.setState({firewall: newFirewall});
     }
 
+    onClick = () => {
+        this.httpClient.post('../api/absythe/firewallConfiguration', this.state.firewall).then((resp) => {
+            console.log(resp);
+        });
+    }
+
     render() {
         const isConnected = this.state.connected;
         const { firewallType, firewallIpAddress, firewallUsername, firewallPassword } = this.state.firewall;
@@ -60,7 +67,7 @@ export class FirewallConfiguration extends Component {
                 <EuiHealth color={ isConnected ? "success" : "danger" }></EuiHealth>
                 <h3 style={{display: "inline-block"}}>{isConnected ? "Connected" : "Disconnected"}</h3>
                 <EuiSpacer />
-                <EuiForm style={{width: 600}}>
+                <EuiForm style={{width: 600}} onSubmit={this.onCustomSubmit}>
                     <EuiFlexGroup>
                     <EuiFlexItem>
                     <EuiFormRow label="Firewall Type">
@@ -94,7 +101,7 @@ export class FirewallConfiguration extends Component {
                     </EuiFlexGroup>
                     <EuiSpacer />
                     <div style={{textAlign: "center"}}>
-                        <EuiButton type="submit">
+                        <EuiButton type="submit" onClick={this.onClick} fill={true}>
                             Save
                         </EuiButton>
                     </div>

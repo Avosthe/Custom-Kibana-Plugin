@@ -24,11 +24,8 @@ export class Main extends React.Component {
        manage state and update your UI than this.
     */
     const { httpClient } = this.props;
-    httpClient.get('../api/absythe/example2').then((resp) => {
+    httpClient.get('../api/absythe/example').then((resp) => {
       this.setState({ time: resp.data.time });
-    });
-    httpClient.get('../api/absythe/firewallConfiguration').then((resp) => {
-      console.log(resp);
     });
   }
   render() {

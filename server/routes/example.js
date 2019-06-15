@@ -1,3 +1,5 @@
+import { connectableObservableDescriptor } from "rxjs/internal/observable/ConnectableObservable";
+
 const { Client } = require("@elastic/elasticsearch");
 
 const client = new Client({ node: "http://localhost:9200", maxRetries: 5});
@@ -42,5 +44,14 @@ export default function (server) {
       }
       return firewallDoc;
   }
+  },
+  {
+    path: '/api/absythe/firewallConfiguration',
+    method: 'POST',
+    handler: async function handler(request, response) {
+      console.log(typeof request.payload);
+      await client.update({ id: "1", index: "firewall", type: "firewall", body: { doc: request.payload }});
+      return request.payload;
+    }
   }]);
 }
