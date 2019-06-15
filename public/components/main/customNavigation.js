@@ -4,8 +4,10 @@ import {
     EuiTitle,
     EuiText,
     EuiSpacer,
+    EuiIcon
   } from '@elastic/eui';
 import FirewallConfiguration from "./FirewallConfiguration";
+import Alert from "./Alert";
 
 
 export class CustomNavigation extends Component {
@@ -20,7 +22,7 @@ export class CustomNavigation extends Component {
               content: (
                 <Fragment>
                   <EuiSpacer />
-                  <FirewallConfiguration />
+                  <FirewallConfiguration httpClient={this.props.httpClient} />
                 </Fragment>
               ),
             },
@@ -30,13 +32,7 @@ export class CustomNavigation extends Component {
               content: (
                 <Fragment>
                   <EuiSpacer />
-                  <EuiTitle>
-                    <h3>Alerts Panel</h3>
-                  </EuiTitle>
-                  <EuiSpacer />
-                  <EuiText>
-                    This tab will display all the security alerts generated with our custom micro-service.
-                  </EuiText>
+                  <Alert />
                 </Fragment>
               ),
             },

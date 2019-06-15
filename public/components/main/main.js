@@ -7,7 +7,8 @@ import {
   EuiPageContent,
   EuiPageContentHeader,
   EuiPageContentBody,
-  EuiText
+  EuiText,
+  EuiSpacer
 } from '@elastic/eui';
 import { CustomNavigation } from "./customNavigation";
 
@@ -23,8 +24,11 @@ export class Main extends React.Component {
        manage state and update your UI than this.
     */
     const { httpClient } = this.props;
-    httpClient.get('../api/absythe/example').then((resp) => {
+    httpClient.get('../api/absythe/example2').then((resp) => {
       this.setState({ time: resp.data.time });
+    });
+    httpClient.get('../api/absythe/firewallConfiguration').then((resp) => {
+      console.log(resp);
     });
   }
   render() {
@@ -41,9 +45,10 @@ export class Main extends React.Component {
           </EuiPageHeader>
           <EuiPageContent>
             <EuiPageContentHeader>
-              <h2>Blank Content Header</h2>
             </EuiPageContentHeader>
-            <CustomNavigation/>
+            <CustomNavigation httpClient={this.props.httpClient}/>
+            <EuiSpacer/>
+            <EuiSpacer/>
             <EuiPageContentBody>
               <EuiText>
                 <h3>
