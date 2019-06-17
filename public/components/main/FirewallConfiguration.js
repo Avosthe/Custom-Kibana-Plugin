@@ -15,7 +15,7 @@ from "@elastic/eui";
 
 // Firewall Configuration
 // Contains 4 inputs namely, Firewall Type, IP Address, Username + Password
-// Also contains a button to submit the details
+// Contains a button to submit the details
 // Contains a circle icon (red/green) that indicates if an active, authenticated connection to the firewall can be established
 
 export class FirewallConfiguration extends Component {
@@ -50,14 +50,7 @@ export class FirewallConfiguration extends Component {
             this.setState( {firewall: resp.data} );
             if (this.state.firewall.firewallApiKey === "") {
                 if (this.state.firewall.firewallIpAddress != "" && this.state.firewall.firewallUsername != "" &&  this.state.firewall.firewallPassword != "") {
-                    this.getFirewallApiKey().then( (resp) => {
-                        if (!Object.keys(resp).includes("error")) {
-                            let newFirewall = Object.assign({}, this.state.firewall);
-                            newFirewall["firewallApiKey"] = resp.firewallApiKey;
-                            this.setState( {firewall: newFirewall, connected: true} )
-                            this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall).then((resp) => {});
-                        }
-                    });
+                    this.getFirewallApiKey();
                 }
             } else {
                 // TODO:
@@ -69,7 +62,15 @@ export class FirewallConfiguration extends Component {
 
     getFirewallApiKey = async () => {
         let resp = await this.httpClient.get(`../api/absythe/getFirewallApiKey?firewallUsername=${this.state.firewall.firewallUsername}&firewallPassword=${this.state.firewall.firewallPassword}&firewallIpAddress=${this.state.firewall.firewallIpAddress}`);
-        return resp.data;
+        resp = resp.data;
+        if (!Object.keys(resp).includes("error")) {
+            let newFirewall = Object.assign({}, this.state.firewall);
+            newFirewall["firewallApiKey"] = resp.firewallApiKey;
+            this.setState( {firewall: newFirewall, connected: true} )
+            this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall);
+        } else {
+            this.setState( {connected: false} );
+        }
     }
 
     onInputChange = (e) => {
@@ -81,16 +82,7 @@ export class FirewallConfiguration extends Component {
 
     onClick = () => {
         this.setState({formButton: this.loadingSpinner});
-        this.getFirewallApiKey().then( (resp) => {
-            if (!Object.keys(resp).includes("error")) {
-                let newFirewall = Object.assign({}, this.state.firewall);
-                newFirewall["firewallApiKey"] = resp.firewallApiKey;
-                this.setState( {firewall: newFirewall, connected: true} )
-                this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall).then((resp) => {});
-            } else {
-                this.setState( {connected: false} );
-            }
-        })
+        this.getFirewallApiKey();
         this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall).then((resp) => {
             this.setState({formButton: this.formButton});
         });
