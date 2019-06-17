@@ -9,7 +9,8 @@ import
     EuiButton,
     EuiSpacer,
     EuiHealth,
-    EuiFieldPassword   } 
+    EuiFieldPassword,
+    EuiLoadingSpinner   } 
 from "@elastic/eui";
 
 // Firewall Configuration
@@ -24,6 +25,8 @@ export class FirewallConfiguration extends Component {
 
         const { httpClient } = this.props;
         this.httpClient = httpClient;
+        this.formButton = <EuiButton type="submit" onClick={this.onClick} fill={true}>Save</EuiButton>;
+        this.loadingSpinner = <EuiLoadingSpinner size={"xl"} />;
 
         this.firewallOptions = [
             { value: "palo_alto", text: "Palo Alto Firewall" },
@@ -36,14 +39,37 @@ export class FirewallConfiguration extends Component {
                 firewallType: "palo_alto",
                 firewallIpAddress: "",
                 firewallUsername: "",
-                firewallPassword: ""
+                firewallPassword: "",
+                firewallApiKey: ""
             },
-            connected: false
+            connected: false,
+            formButton: this.formButton
         }
 
-        httpClient.get('../api/absythe/firewallConfiguration').then( (resp) => {
+        this.httpClient.get('../api/absythe/initialFirewallQuery').then( (resp) => {
             this.setState( {firewall: resp.data} );
+            if (this.state.firewall.firewallApiKey === "") {
+                if (this.state.firewall.firewallIpAddress != "" && this.state.firewall.firewallUsername != "" &&  this.state.firewall.firewallPassword != "") {
+                    this.getFirewallApiKey().then( (resp) => {
+                        if (!Object.keys(resp).includes("error")) {
+                            let newFirewall = Object.assign({}, this.state.firewall);
+                            newFirewall["firewallApiKey"] = resp.firewallApiKey;
+                            this.setState( {firewall: newFirewall, connected: true} )
+                            this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall).then((resp) => {});
+                        }
+                    });
+                }
+            } else {
+                // TODO:
+                // Should test api key validity instead of just setting connected to true
+                this.setState( {connected: true} );
+            }
         });
+    }
+
+    getFirewallApiKey = async () => {
+        let resp = await this.httpClient.get(`../api/absythe/getFirewallApiKey?firewallUsername=${this.state.firewall.firewallUsername}&firewallPassword=${this.state.firewall.firewallPassword}&firewallIpAddress=${this.state.firewall.firewallIpAddress}`);
+        return resp.data;
     }
 
     onInputChange = (e) => {
@@ -54,20 +80,30 @@ export class FirewallConfiguration extends Component {
     }
 
     onClick = () => {
-        this.httpClient.post('../api/absythe/firewallConfiguration', this.state.firewall).then((resp) => {
-            console.log(resp);
+        this.setState({formButton: this.loadingSpinner});
+        this.getFirewallApiKey().then( (resp) => {
+            if (!Object.keys(resp).includes("error")) {
+                let newFirewall = Object.assign({}, this.state.firewall);
+                newFirewall["firewallApiKey"] = resp.firewallApiKey;
+                this.setState( {firewall: newFirewall, connected: true} )
+                this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall).then((resp) => {});
+            } else {
+                this.setState( {connected: false} );
+            }
+        })
+        this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall).then((resp) => {
+            this.setState({formButton: this.formButton});
         });
     }
 
     render() {
-        const isConnected = this.state.connected;
         const { firewallType, firewallIpAddress, firewallUsername, firewallPassword } = this.state.firewall;
         return (
             <Fragment>
-                <EuiHealth color={ isConnected ? "success" : "danger" }></EuiHealth>
-                <h3 style={{display: "inline-block"}}>{isConnected ? "Connected" : "Disconnected"}</h3>
+                <EuiHealth color={ this.state.connected ? "success" : "danger" }></EuiHealth>
+                <h3 style={{display: "inline-block"}}>{this.state.connected ? "Connected" : "Disconnected"}</h3>
                 <EuiSpacer />
-                <EuiForm style={{width: 600}} onSubmit={this.onCustomSubmit}>
+                <EuiForm style={{width: 600}}>
                     <EuiFlexGroup>
                     <EuiFlexItem>
                     <EuiFormRow label="Firewall Type">
@@ -100,11 +136,11 @@ export class FirewallConfiguration extends Component {
                     </EuiFlexItem>
                     </EuiFlexGroup>
                     <EuiSpacer />
-                    <div style={{textAlign: "center"}}>
-                        <EuiButton type="submit" onClick={this.onClick} fill={true}>
-                            Save
-                        </EuiButton>
-                    </div>
+                    <EuiFlexGroup justifyContent={"center"} alignItems={"center"}>
+                        <EuiFlexItem grow={null}>
+                            {this.state.formButton}
+                        </EuiFlexItem>
+                    </EuiFlexGroup>
                 </EuiForm>
             </Fragment>
         )
