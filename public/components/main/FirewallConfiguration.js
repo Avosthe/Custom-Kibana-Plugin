@@ -53,13 +53,15 @@ export class FirewallConfiguration extends Component {
                     this.getFirewallApiKey();
                 }
             } else {
-                // TODO:
-                // Should test api key validity instead of just setting connected to true
-                this.setState( {connected: true} );
+                this.httpClient.get(`../api/absythe/testFirewallApiKey?firewallIpAddress=${this.state.firewall.firewallIpAddress}&firewallApiKey=${this.state.firewall.firewallApiKey}`).then( (resp) => {
+                    if (resp.data.success === 1){
+                        this.setState( {connected: true} );
+                    }
+                    else {
+                        this.getFirewallApiKey();
+                    }
+                })
             }
-        });
-
-        this.httpClient.get(`../api/absythe/testFirewallApiKey?firewallIpAddress=${this.state.firewall.firewallIpAddress}&firewallApiKey=${this.state.firewall.firewallApiKey}`).then( (resp) => {
         });
     }
 

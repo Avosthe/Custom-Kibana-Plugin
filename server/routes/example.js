@@ -104,8 +104,6 @@ export default function (server) {
         }
       });
 
-      console.log(invalidCredentials);
-
       return invalidCredentials ? {error: "invalid credentials"} : { firewallApiKey: firewallApiKey };
 
     }
@@ -117,11 +115,18 @@ export default function (server) {
       let firewallIpAddress = request.query.firewallIpAddress;
       let respObj = { success: 0 };
 
-      const resp = await axios.get(getFirewallCommandLink(firewallIpAddress, "showSysInfo", firewallApiKey), httpsAgent).catch(() => {});
-      if (resp !== undefined){
-        return resp;
+
+      let command = getFirewallCommandLink(firewallIpAddress, firewallApiKey, "showSysInfo");
+      const resp = await axios.get(command, httpsAgent).catch(() => {});
+      if (resp === undefined){
+        return respObj;
       }
-      return { error: "resp was undefined"};
+      parseString(resp.data, (err, result) => {
+        if (result.response.$.status === "success") {
+          respObj.success = 1;
+        }
+      });
+      return respObj;
     }
   }]);
 }
