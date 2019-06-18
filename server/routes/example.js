@@ -17,7 +17,27 @@ const defaultFirewallDocument = {
   firewallApiKey: ""
 }
 
+const agent = new https.Agent({
+  rejectUnauthorized: false
+});
+
+const httpsAgent = {
+  httpsAgent: agent,
+  timeout: 2000
+};
+
 export default function (server) {
+
+  let getFirewallCommandLink = (firewallIpAddress, firewallApiKey, firewallCommand) => {
+    let xmlFirewallCommand;
+    
+    switch (firewallCommand) {
+      case "showSysInfo":
+        xmlFirewallCommand = "<show><system><info></info></system></show>";
+    }
+
+    return `https://${firewallIpAddress}/api/?type=op&cmd=${xmlFirewallCommand}&key=${firewallApiKey}`;
+  }
 
   server.route([{
     path: '/api/absythe/example',
@@ -69,23 +89,39 @@ export default function (server) {
       let firewallPassword = request.query.firewallPassword;
       let firewallIpAddress = request.query.firewallIpAddress;
       let firewallApiKey;
+      let invalidCredentials = false;
 
-      const agent = new https.Agent({
-        rejectUnauthorized: false
-      });
-
-      const resp = await axios.get(`https://${firewallIpAddress}/api/?type=keygen&user=${firewallUsername}&password=${firewallPassword}`, { httpsAgent: agent, timeout: 2000 }).catch(() => { });
-      if (resp === undefined) { // means promise was rejected, most possibly could not connect to the server
+      const resp = await axios.get(`https://${firewallIpAddress}/api/?type=keygen&user=${firewallUsername}&password=${firewallPassword}`, httpsAgent).catch(() => { });
+      if (resp === undefined) { // error was thrown, resp remains unassigned therefore it is undefined
         return { error: "could not connect to the firewall" };
       }
       parseString(resp.data, (err, result) => {
         if (result.response.$.status === "success") {
           firewallApiKey =  result.response.result[0].key[0];
         }
+        else {
+          invalidCredentials = true;
+        }
       });
 
-      return { firewallApiKey: firewallApiKey };
+      console.log(invalidCredentials);
 
+      return invalidCredentials ? {error: "invalid credentials"} : { firewallApiKey: firewallApiKey };
+
+    }
+  }, {
+    path: '/api/absythe/testFirewallApiKey',
+    method: 'GET',
+    handler: async function handler(request, response) {
+      let firewallApiKey = request.query.firewallApiKey;
+      let firewallIpAddress = request.query.firewallIpAddress;
+      let respObj = { success: 0 };
+
+      const resp = await axios.get(getFirewallCommandLink(firewallIpAddress, "showSysInfo", firewallApiKey), httpsAgent).catch(() => {});
+      if (resp !== undefined){
+        return resp;
+      }
+      return { error: "resp was undefined"};
     }
   }]);
 }

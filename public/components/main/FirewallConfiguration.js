@@ -58,10 +58,14 @@ export class FirewallConfiguration extends Component {
                 this.setState( {connected: true} );
             }
         });
+
+        this.httpClient.get(`../api/absythe/testFirewallApiKey?firewallIpAddress=${this.state.firewall.firewallIpAddress}&firewallApiKey=${this.state.firewall.firewallApiKey}`).then( (resp) => {
+        });
     }
 
     getFirewallApiKey = async () => {
-        let resp = await this.httpClient.get(`../api/absythe/getFirewallApiKey?firewallUsername=${this.state.firewall.firewallUsername}&firewallPassword=${this.state.firewall.firewallPassword}&firewallIpAddress=${this.state.firewall.firewallIpAddress}`);
+        const { firewallUsername, firewallPassword, firewallIpAddress } = this.state.firewall;
+        let resp = await this.httpClient.get(`../api/absythe/getFirewallApiKey?firewallUsername=${firewallUsername}&firewallPassword=${firewallPassword}&firewallIpAddress=${firewallIpAddress}`);
         resp = resp.data;
         if (!Object.keys(resp).includes("error")) {
             let newFirewall = Object.assign({}, this.state.firewall);
