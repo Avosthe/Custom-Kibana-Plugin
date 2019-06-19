@@ -108,22 +108,27 @@ export default function (server) {
 
     }
   }, {
-    path: '/api/absythe/testFirewallApiKey',
+    path: '/api/absythe/firewallCommand',
     method: 'GET',
     handler: async function handler(request, response) {
       let firewallApiKey = request.query.firewallApiKey;
       let firewallIpAddress = request.query.firewallIpAddress;
-      let respObj = { success: 0 };
+      let firewallCommand = request.query.firewallCommand;
+      let respObj = { };
 
 
-      let command = getFirewallCommandLink(firewallIpAddress, firewallApiKey, "showSysInfo");
+      let command = getFirewallCommandLink(firewallIpAddress, firewallApiKey, firewallCommand);
       const resp = await axios.get(command, httpsAgent).catch(() => {});
       if (resp === undefined){
+        respObj.error = "could not connect to firewall";
         return respObj;
       }
       parseString(resp.data, (err, result) => {
         if (result.response.$.status === "success") {
-          respObj.success = 1;
+          respObj = result;
+        }
+        else{
+          respObj.error = "invalid firewallApiKey";
         }
       });
       return respObj;

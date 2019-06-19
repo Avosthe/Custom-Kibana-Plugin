@@ -1,7 +1,7 @@
 import React, { Component, Fragment } from 'react';
-import 
-{   EuiForm,
-    EuiSelect, 
+import {
+    EuiForm,
+    EuiSelect,
     EuiFormRow,
     EuiFieldText,
     EuiFlexGroup,
@@ -10,8 +10,18 @@ import
     EuiSpacer,
     EuiHealth,
     EuiFieldPassword,
-    EuiLoadingSpinner   } 
-from "@elastic/eui";
+    EuiLoadingSpinner,
+    EuiModal,
+    EuiModalBody,
+    EuiModalFooter,
+    EuiModalHeader,
+    EuiModalHeaderTitle,
+    EuiOverlayMask,
+    EuiDescriptionList,
+    EuiDescriptionListTitle,
+    EuiDescriptionListDescription,
+}
+    from "@elastic/eui";
 
 // Firewall Configuration
 // Contains 4 inputs namely, Firewall Type, IP Address, Username + Password
@@ -25,15 +35,15 @@ export class FirewallConfiguration extends Component {
 
         const { httpClient } = this.props;
         this.httpClient = httpClient;
-        this.formButton = <EuiButton type="submit" onClick={this.onClick} fill={true}>Save</EuiButton>;
+        this.formButton = <EuiButton type="submit" onClick={this.onSubmitButtonClick} fill={true}>Save</EuiButton>;
         this.loadingSpinner = <EuiLoadingSpinner size={"xl"} />;
 
         this.firewallOptions = [
             { value: "palo_alto", text: "Palo Alto Firewall" },
             { value: "cisco", text: "Cisco Firewall" },
-            { value: "pfSense", text: "pfSense Firewall"}
+            { value: "pfSense", text: "pfSense Firewall" }
         ]
-        
+
         this.state = {
             firewall: {
                 firewallType: "palo_alto",
@@ -43,26 +53,43 @@ export class FirewallConfiguration extends Component {
                 firewallApiKey: ""
             },
             connected: false,
-            formButton: this.formButton
+            formButton: this.formButton,
+            isFirewallInfoModalVisible: false,
+            firewallInfo: null
         }
 
-        this.httpClient.get('../api/absythe/initialFirewallQuery').then( (resp) => {
-            this.setState( {firewall: resp.data} );
+        this.httpClient.get('../api/absythe/initialFirewallQuery').then((resp) => {
+            this.setState({ firewall: resp.data });
             if (this.state.firewall.firewallApiKey === "") {
-                if (this.state.firewall.firewallIpAddress != "" && this.state.firewall.firewallUsername != "" &&  this.state.firewall.firewallPassword != "") {
+                if (this.state.firewall.firewallIpAddress != "" && this.state.firewall.firewallUsername != "" && this.state.firewall.firewallPassword != "") {
                     this.getFirewallApiKey();
                 }
             } else {
-                this.httpClient.get(`../api/absythe/testFirewallApiKey?firewallIpAddress=${this.state.firewall.firewallIpAddress}&firewallApiKey=${this.state.firewall.firewallApiKey}`).then( (resp) => {
-                    if (resp.data.success === 1){
-                        this.setState( {connected: true} );
+                this.getFirewallInfo().then((resp) => {
+                    if (resp === 1) {
+                        this.setState({ connected: true });
                     }
                     else {
                         this.getFirewallApiKey();
                     }
-                })
+                });
             }
         });
+    }
+
+    getFirewallInfo = async () => {
+        let resp = await this.httpClient.get(`../api/absythe/firewallCommand?firewallIpAddress=${this.state.firewall.firewallIpAddress}&firewallApiKey=${this.state.firewall.firewallApiKey}&firewallCommand=showSysInfo`);
+        if (!Object.keys(resp).includes("error")) {
+            let firewallInfo = resp.data.response.result[0].system[0];
+            let firewallInfoArray = [];
+            const keys = Object.keys(firewallInfo);
+            for(const key of keys) {
+                firewallInfoArray.push({ title: key, description: firewallInfo[key][0]});
+            }
+            this.setState( {firewallInfo: firewallInfoArray} );
+            return 1;
+        }
+        return 0;
     }
 
     getFirewallApiKey = async () => {
@@ -72,10 +99,10 @@ export class FirewallConfiguration extends Component {
         if (!Object.keys(resp).includes("error")) {
             let newFirewall = Object.assign({}, this.state.firewall);
             newFirewall["firewallApiKey"] = resp.firewallApiKey;
-            this.setState( {firewall: newFirewall, connected: true} )
+            this.setState({ firewall: newFirewall, connected: true })
             this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall);
         } else {
-            this.setState( {connected: false} );
+            this.setState({ connected: false });
         }
     }
 
@@ -83,55 +110,123 @@ export class FirewallConfiguration extends Component {
         var property = e.target.name;
         let newFirewall = Object.assign({}, this.state.firewall);
         newFirewall[property] = e.target.value;
-        this.setState({firewall: newFirewall});
+        this.setState({ firewall: newFirewall });
     }
 
-    onClick = () => {
-        this.setState({formButton: this.loadingSpinner});
+    onSubmitButtonClick = () => {
+        this.setState({ formButton: this.loadingSpinner });
         this.getFirewallApiKey();
+        if (this.state.connected === true) {
+            this.getFirewallInfo();
+        }
         this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall).then((resp) => {
-            this.setState({formButton: this.formButton});
+            this.setState({ formButton: this.formButton });
         });
     }
 
-    render() {
-        const { firewallType, firewallIpAddress, firewallUsername, firewallPassword } = this.state.firewall;
-        return (
-            <Fragment>
-                <EuiHealth color={ this.state.connected ? "success" : "danger" }></EuiHealth>
-                <h3 style={{display: "inline-block"}}>{this.state.connected ? "Connected" : "Disconnected"}</h3>
-                <EuiSpacer />
-                <EuiForm style={{width: 600}}>
+    showFirewallInfoModal = () => {
+        this.setState({ isFirewallInfoModalVisible: true });
+    }
+
+    closeFirewallInfoModal = () => {
+        this.setState({ isFirewallInfoModalVisible: false });
+    }
+
+    generateFirewallInfo = () => {
+        const { firewallInfo } = this.state;
+        if(firewallInfo !== null){
+            if(firewallInfo.length <= 1) {
+                return (
                     <EuiFlexGroup>
                     <EuiFlexItem>
-                    <EuiFormRow label="Firewall Type">
-                        <EuiSelect
-                            id={"firewallType"}
-                            options={this.firewallOptions}
-                            value={firewallType}
-                            onChange={this.onInputChange}
-                            name={"firewallType"}
-                        />
-                    </EuiFormRow>
-                    </EuiFlexItem>
-                    <EuiFlexItem>
-                    <EuiFormRow label="Firewall IP Address">
-                        <EuiFieldText placeholder="eg. 192.168.1.1" value={firewallIpAddress} onChange={this.onInputChange} 
-                        name="firewallIpAddress" />
-                    </EuiFormRow>
+                        <EuiDescriptionList listItems={firewallInfo}>
+                        </EuiDescriptionList>
                     </EuiFlexItem>
                     </EuiFlexGroup>
+                );
+            }
+            let firewallInfoArray1 = firewallInfo.slice(0, (firewallInfo.length / 2) + 1);
+            let firewallInfoArray2 = firewallInfo.slice((firewallInfo.length / 2) + 1);
+            return (
+                <EuiFlexGroup>
+                <EuiFlexItem>
+                    <EuiDescriptionList listItems={firewallInfoArray1}>
+                    </EuiDescriptionList>
+                </EuiFlexItem>
+                <EuiFlexItem>
+                    <EuiDescriptionList listItems={firewallInfoArray2}>
+                    </EuiDescriptionList>
+                </EuiFlexItem>
+                </EuiFlexGroup>
+            );
+        }
+    }
+
+    render() {
+        let firewallInfoModal;
+        const { firewallType, firewallIpAddress, firewallUsername, firewallPassword } = this.state.firewall;
+
+        if (this.state.isFirewallInfoModalVisible) {
+
+            firewallInfoModal = (
+                <EuiOverlayMask>
+                    <EuiModal onClose={this.closeFirewallInfoModal} maxWidth={"900px"} style={{ width: "900px" }}>
+                        <EuiModalHeader style={{ justifyContent: "center" }}>
+                            <EuiModalHeaderTitle style={{ textDecoration: "underline" }}>Detailed Firewall Information</EuiModalHeaderTitle>
+                        </EuiModalHeader>
+
+                        <EuiModalBody>
+                                {this.generateFirewallInfo()}
+                        </EuiModalBody>
+
+                        <EuiModalFooter>
+                        </EuiModalFooter>
+                    </EuiModal>
+                </EuiOverlayMask>
+            );
+        }
+
+
+        return (
+            <Fragment>
+                {firewallInfoModal}
+                <div>
+                    <EuiHealth color={this.state.connected ? "success" : "danger"}></EuiHealth>
+                    <h3 style={{ display: "inline-block", marginRight: "15px", verticalAlign: "center" }}>{this.state.connected ? "Connected" : "Disconnected"}</h3>
+                    <EuiButton isDisabled={this.state.connected ? false : true} fill color="danger" onClick={this.showFirewallInfoModal} size="s">Firewall Info</EuiButton>
+                </div>
+                <EuiSpacer />
+                <EuiForm style={{ width: 600 }}>
                     <EuiFlexGroup>
-                    <EuiFlexItem>
-                        <EuiFormRow label="Firewall Username">
-                            <EuiFieldText placeholder="eg. admin" value={firewallUsername} onChange={this.onInputChange} name="firewallUsername"/>
-                        </EuiFormRow>
-                    </EuiFlexItem>
-                    <EuiFlexItem>
-                        <EuiFormRow label="Firewall Password">
-                            <EuiFieldPassword placeholder="eg. password" value={firewallPassword} onChange={this.onInputChange} name="firewallPassword"/>
-                        </EuiFormRow>
-                    </EuiFlexItem>
+                        <EuiFlexItem>
+                            <EuiFormRow label="Firewall Type">
+                                <EuiSelect
+                                    id={"firewallType"}
+                                    options={this.firewallOptions}
+                                    value={firewallType}
+                                    onChange={this.onInputChange}
+                                    name={"firewallType"}
+                                />
+                            </EuiFormRow>
+                        </EuiFlexItem>
+                        <EuiFlexItem>
+                            <EuiFormRow label="Firewall IP Address">
+                                <EuiFieldText placeholder="eg. 192.168.1.1" value={firewallIpAddress} onChange={this.onInputChange}
+                                    name="firewallIpAddress" />
+                            </EuiFormRow>
+                        </EuiFlexItem>
+                    </EuiFlexGroup>
+                    <EuiFlexGroup>
+                        <EuiFlexItem>
+                            <EuiFormRow label="Firewall Username">
+                                <EuiFieldText placeholder="eg. admin" value={firewallUsername} onChange={this.onInputChange} name="firewallUsername" />
+                            </EuiFormRow>
+                        </EuiFlexItem>
+                        <EuiFlexItem>
+                            <EuiFormRow label="Firewall Password">
+                                <EuiFieldPassword placeholder="eg. password" value={firewallPassword} onChange={this.onInputChange} name="firewallPassword" />
+                            </EuiFormRow>
+                        </EuiFlexItem>
                     </EuiFlexGroup>
                     <EuiSpacer />
                     <EuiFlexGroup justifyContent={"center"} alignItems={"center"}>
