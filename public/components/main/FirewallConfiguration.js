@@ -17,11 +17,10 @@ import {
     EuiModalHeader,
     EuiModalHeaderTitle,
     EuiOverlayMask,
-    EuiDescriptionList,
-    EuiDescriptionListTitle,
-    EuiDescriptionListDescription,
+    EuiDescriptionList
 }
     from "@elastic/eui";
+import { AST_ObjectGetter } from 'terser';
 
 // Firewall Configuration
 // Contains 4 inputs namely, Firewall Type, IP Address, Username + Password
@@ -49,60 +48,54 @@ export class FirewallConfiguration extends Component {
                 firewallType: "palo_alto",
                 firewallIpAddress: "",
                 firewallUsername: "",
-                firewallPassword: "",
-                firewallApiKey: ""
+                firewallPassword: ""
             },
             connected: false,
             formButton: this.formButton,
             isFirewallInfoModalVisible: false,
-            firewallInfo: null
+            firewallInfo: null,
         }
 
-        this.httpClient.get('../api/absythe/initialFirewallQuery').then((resp) => {
-            this.setState({ firewall: resp.data });
-            if (this.state.firewall.firewallApiKey === "") {
-                if (this.state.firewall.firewallIpAddress != "" && this.state.firewall.firewallUsername != "" && this.state.firewall.firewallPassword != "") {
-                    this.getFirewallApiKey();
-                }
-            } else {
-                this.getFirewallInfo().then((resp) => {
-                    if (resp === 1) {
-                        this.setState({ connected: true });
+        this.httpClient.get('../api/absythe/isAuthenticated').then((resp) => {
+            let data = resp.data;
+            if(data.authenticated === 1) {
+                this.setState( {connected: true} );
+                this.sendFirewallCommand("showSysInfo").then((resp) => {
+                    if(!Object.keys(resp).includes("error")){
+                        this.setState( {firewallInfo: this.formatFirewallCommandResult("showSysInfo", resp)} );
                     }
-                    else {
-                        this.getFirewallApiKey();
-                    }
-                });
+            });
             }
+            this.httpClient.get('../api/absythe/getFirewallConfiguration').then((resp) => {
+                let data = resp.data;
+                if(!Object.keys(data).includes("error")){
+                    this.setState( {firewall: data} );
+                }
+            });
         });
     }
 
-    getFirewallInfo = async () => {
-        let resp = await this.httpClient.get(`../api/absythe/firewallCommand?firewallIpAddress=${this.state.firewall.firewallIpAddress}&firewallApiKey=${this.state.firewall.firewallApiKey}&firewallCommand=showSysInfo`);
-        if (!Object.keys(resp).includes("error")) {
-            let firewallInfo = resp.data.response.result[0].system[0];
-            let firewallInfoArray = [];
-            const keys = Object.keys(firewallInfo);
-            for(const key of keys) {
-                firewallInfoArray.push({ title: key, description: firewallInfo[key][0]});
-            }
-            this.setState( {firewallInfo: firewallInfoArray} );
-            return 1;
+    sendFirewallCommand = async (firewallCommand) => {
+        let resp = await this.httpClient.get(`../api/absythe/firewallCommand?firewallCommand=${firewallCommand}`);
+        let data = resp.data;
+        if(!Object.keys(data).includes("error")){
+            return data;
         }
-        return 0;
+        return {error: data.error};
     }
 
-    getFirewallApiKey = async () => {
-        const { firewallUsername, firewallPassword, firewallIpAddress } = this.state.firewall;
-        let resp = await this.httpClient.get(`../api/absythe/getFirewallApiKey?firewallUsername=${firewallUsername}&firewallPassword=${firewallPassword}&firewallIpAddress=${firewallIpAddress}`);
-        resp = resp.data;
-        if (!Object.keys(resp).includes("error")) {
-            let newFirewall = Object.assign({}, this.state.firewall);
-            newFirewall["firewallApiKey"] = resp.firewallApiKey;
-            this.setState({ firewall: newFirewall, connected: true })
-            this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall);
-        } else {
-            this.setState({ connected: false });
+    formatFirewallCommandResult = (command, input) => {
+        switch(command){
+            case "showSysInfo":
+                let firewallInfo = input;             
+                let firewallInfoArray = [];
+                const keys = Object.keys(firewallInfo);
+                for(const key of keys) {
+                    firewallInfoArray.push({ title: key, description: firewallInfo[key][0]});
+                }
+                return firewallInfoArray;
+            default:
+                return {};
         }
     }
 
@@ -113,13 +106,21 @@ export class FirewallConfiguration extends Component {
         this.setState({ firewall: newFirewall });
     }
 
-    onSubmitButtonClick = () => {
-        this.setState({ formButton: this.loadingSpinner });
-        this.getFirewallApiKey();
-        if (this.state.connected === true) {
-            this.getFirewallInfo();
-        }
-        this.httpClient.post('../api/absythe/setFirewallConfiguration', this.state.firewall).then((resp) => {
+    onSubmitButtonClick = async () => {
+        this.setState({ formButton: this.loadingSpinner, firewallInfo: null, connected: false });
+        this.httpClient.post('../api/absythe/authenticate', this.state.firewall).then((resp) => {
+            let data = resp.data;
+            if(!Object.keys(data).includes("error")){
+                this.setState( {connected: true, firewall: data} );
+                this.sendFirewallCommand("showSysInfo").then((resp) => {
+                    if(!Object.keys(resp).includes("error")){
+                        this.setState( {firewallInfo: this.formatFirewallCommandResult("showSysInfo", resp)} );
+                    }
+                });
+            }
+            else{
+                this.setState( {connected: false} );
+            }
             this.setState({ formButton: this.formButton });
         });
     }
@@ -178,7 +179,6 @@ export class FirewallConfiguration extends Component {
                         <EuiModalBody>
                                 {this.generateFirewallInfo()}
                         </EuiModalBody>
-
                         <EuiModalFooter>
                         </EuiModalFooter>
                     </EuiModal>

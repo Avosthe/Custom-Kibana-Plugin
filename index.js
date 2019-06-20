@@ -1,5 +1,14 @@
 import exampleRoute from './server/routes/example';
 
+let hapiCookiePw = "dsjAp9aU7Dfw9E7JLcRHuxgtQsq5qKLQa6c";
+let hapiJsOptions = {
+  storeBlank: false,
+  cookieOptions: {
+      password: hapiCookiePw,
+      isSecure: false
+  }
+};
+
 export default function (kibana) {
   return new kibana.Plugin({
     require: ['elasticsearch'],
@@ -24,8 +33,12 @@ export default function (kibana) {
       }).default();
     },
 
-    init(server, options) { // eslint-disable-line no-unused-vars
+    async init(server, options) { // eslint-disable-line no-unused-vars
       // Add server routes and initialize the plugin here
+      await server.register({
+        plugin: require('@hapi/yar'),
+        options: hapiJsOptions
+      });
       exampleRoute(server);
     }
   });
