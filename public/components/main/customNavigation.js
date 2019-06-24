@@ -7,7 +7,8 @@ import {
     EuiIcon
   } from '@elastic/eui';
 import FirewallConfiguration from "./FirewallConfiguration";
-import Alert from "./Alert";
+import NotificationSetup from "./NotificationSetup";
+import AlertPanel from "./AlertPanel";
 
 
 export class CustomNavigation extends Component {
@@ -32,7 +33,7 @@ export class CustomNavigation extends Component {
               content: (
                 <Fragment>
                   <EuiSpacer />
-                  <Alert />
+                  <AlertPanel httpClient={this.props.httpClient} />
                 </Fragment>
               ),
             },
@@ -42,13 +43,7 @@ export class CustomNavigation extends Component {
               content: (
                 <Fragment>
                   <EuiSpacer />
-                  <EuiTitle>
-                    <h3>Notification Setup</h3>
-                  </EuiTitle>
-                  <EuiSpacer />
-                  <EuiText>
-                    This tab allows network administrators to configure the communication vectors when a security alert is being generated.
-                  </EuiText>
+                  <NotificationSetup httpClient={this.props.httpClient} />
                 </Fragment>
               ),
             },
@@ -91,11 +86,8 @@ export class CustomNavigation extends Component {
         return (
             <EuiTabbedContent
               tabs={this.tabs}
-              initialSelectedTab={this.tabs[0]}
+              initialSelectedTab={this.tabs[1]}
               expand={true}
-              onTabClick={tab => {
-                console.log('clicked tab', tab);
-              }}
               className="customNavigation"
             />
           );
