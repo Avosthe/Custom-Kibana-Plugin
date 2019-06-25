@@ -5,6 +5,7 @@ import {
     EuiButton,
     EuiToolTip
 } from "@elastic/eui"
+import swal from 'sweetalert'
 
 export class Alerts extends Component {
 
@@ -38,7 +39,15 @@ export class Alerts extends Component {
     onThreatAddressClick = async (e) => {
         let resp = await this.httpClient.get(`../api/absythe/msalerts/respond?id=${e.target.id}&respType=address`);
         if(resp !== undefined){
-            console.log(resp);
+            let data = resp.data;
+            if(!Object.keys(data).includes("error")){
+                swal({
+                    title: "Threat Addressed!",
+                    icon: "success",
+                    button: "Close",
+                    timer: 3000
+                  });
+            }
         } else {
             console.log("resp undefined");
         }
@@ -47,7 +56,15 @@ export class Alerts extends Component {
     onThreatIgnoreClick = async (e) => {
         let resp = await this.httpClient.get(`../api/absythe/msalerts/respond?id=${e.target.id}&respType=ignore`);
         if(resp !== undefined){
-            console.log(resp);
+            let data = resp.data;
+            if(!Object.keys(data).includes("error")){
+                swal({
+                    title: "Threat Ignored!",
+                    icon: "success",
+                    button: "Close",
+                    timer: 3000
+                  });
+            }
         } else {
             console.log("resp undefined");
         }

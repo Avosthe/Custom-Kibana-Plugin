@@ -1,7 +1,6 @@
 import exampleRoute from './server/routes/example';
 
 let hapiCookiePw = process.env.HAPI_JS_PW;
-console.log("hapiCookiePw: " + hapiCookiePw);
 let hapiJsOptions = {
   storeBlank: false,
   cookieOptions: {

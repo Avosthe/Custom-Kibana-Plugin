@@ -103,6 +103,7 @@ export default function (server) {
       handler: (request, response) => {
         let credentials = request.yar.get("credentials");
         if (credentials !== null) {
+          credentials = Object.assign({}, credentials);
           delete credentials.firewallApiKey;
           credentials.firewallPassword = "you're a newb thinking that you can find out the password just like that! sighh, better luck next time";
           return credentials;
@@ -187,6 +188,33 @@ export default function (server) {
           return { error: "error connecting to micro-service" };
         }
         return resp.data;
+      }
+    },
+    {
+      path: '/api/absythe/notificationSetup',
+      method: 'GET',
+      handler: async (request, response) => {
+        let credentials = request.yar.get("notificationCredentials");
+        return credentials === null ? {} : credentials;
+      }
+    },
+    {
+      path: '/api/absythe/notificationSetup',
+      method: 'POST',
+      handler: async (request, response) => {
+        const {medium, id} = request.payload;
+        if(request.yar.get("notificationCredentials") === null){
+          request.yar.set("notificationCredentials", {
+            [medium]: id
+          });
+        }else{
+          let newCredentials = Object.assign({}, request.yar.get("notificationCredentials"));
+          newCredentials = Object.assign(newCredentials, {
+            [medium]: id
+          });
+          request.yar.set("notificationCredentials", newCredentials);
+        }
+        return request.yar.get("notificationCredentials");
       }
     }]);
 }

@@ -1,9 +1,19 @@
 import React, { Component, Fragment } from 'react'
 import {
     EuiSpacer,
-    EuiText,
     EuiFlexGroup,
-    EuiFlexItem
+    EuiFlexItem,
+    EuiForm,
+    EuiButton,
+    EuiButtonEmpty,
+    EuiFieldText,
+    EuiFormRow,
+    EuiModal,
+    EuiModalBody,
+    EuiModalFooter,
+    EuiOverlayMask,
+    EuiModalHeader,
+    EuiModalHeaderTitle,
 
 } from "@elastic/eui"
 
@@ -11,22 +21,101 @@ export class NotificationSetup extends Component {
 
     constructor(props) {
         super(props);
-        const { httpClient } = this.props;
+        this.httpClient = this.props.httpClient;
+        this.state = {
+            isModalVisible: false,
+            medium: null,
+            notificationLabel: null,
+            id: null
+        };
+    }
+
+    closeModal = () => {
+        this.setState({ isModalVisible: false });
+    }
+
+    showModal = () => {
+        this.setState({ isModalVisible: true });
+    }
+
+    getNotificationCredentials = async () => {
+        let resp = await this.httpClient.get("../api/absythe/notificationSetup");
+        if(resp !== undefined){
+            let data = resp.data;
+            let id = data[this.state.medium];
+            this.setState( {id: id === undefined ? null : id} );
+        }
     }
 
     onGmailIconClick = () => {
-        console.log("gmail");
+        this.setState({ medium: "gmail", notificationLabel: "Email Address" });
+        this.getNotificationCredentials();
+        this.showModal();
     }
 
     onSlackIconClick = () => {
-        console.log("slack");
+        this.setState({ medium: "slack", notificationLabel: "Slack Id"});
+        this.getNotificationCredentials();
+        this.showModal();
     }
 
     onDiscordIconClick = () => {
-        console.log("discord");
+        this.setState({ medium: "discord", notificationLabel: "Discord Username" });
+        this.getNotificationCredentials();
+        this.showModal();
+    }
+
+    saveNotificationSetup = async () => {
+        const { medium, id } = this.state;
+        if(medium !== null && id !== null){
+            let resp = await this.httpClient.post(`../api/absythe/notificationSetup`, {
+                medium: medium,
+                id: id
+            });
+            if (resp !== undefined){
+                console.log(resp.data);
+            }
+        }
+        this.closeModal();
+    }
+
+    onNotificationIdChange = (e) => {
+        this.setState( {id: e.target.value} );
     }
 
     render() {
+        const form = (
+            <EuiForm>    
+              <EuiFormRow label={this.state.notificationLabel}>
+                <EuiFieldText name="notificationId" value={this.state.id} onChange={this.onNotificationIdChange}/>
+              </EuiFormRow>
+            </EuiForm>
+        );
+
+        let modal;
+
+        if(this.state.isModalVisible){
+            modal = (
+                <EuiOverlayMask>
+                  <EuiModal onClose={this.closeModal} initialFocus="[name=notificationId]">
+                    <EuiModalHeader>
+                      <EuiModalHeaderTitle>Notification Setup</EuiModalHeaderTitle>
+                    </EuiModalHeader>
+        
+                    <EuiModalBody>{form}</EuiModalBody>
+        
+                    <EuiModalFooter>
+                      <EuiButtonEmpty onClick={this.closeModal}>Cancel</EuiButtonEmpty>
+        
+                      <EuiButton onClick={this.saveNotificationSetup} fill>
+                        Save
+                      </EuiButton>
+                    </EuiModalFooter>
+                  </EuiModal>
+                </EuiOverlayMask>
+              );
+        }
+
         return (
             <Fragment>
                 <EuiSpacer />
@@ -50,7 +139,7 @@ export class NotificationSetup extends Component {
                             <path d='M479.528,58.794H32.459C14.561,58.794,0,73.356,0,91.254v329.493	c0,17.898,14.561,32.459,32.459,32.459h447.069c17.905,0,32.472-14.561,32.472-32.459V91.254	C512,73.356,497.434,58.794,479.528,58.794z M437.867,77.167L256,209.723L74.133,77.167H437.867z M18.373,420.746V135.2	l39.196,28.569v271.064h-25.11C24.692,434.833,18.373,428.513,18.373,420.746z M436.057,434.833H75.943V177.161L250.59,304.457	c1.611,1.175,3.511,1.763,5.41,1.763c1.9,0,3.8-0.588,5.41-1.763l174.647-127.297V434.833z M493.627,420.746	c0,7.767-6.324,14.086-14.098,14.086h-25.098V163.769l39.196-28.569V420.746z M493.627,112.464L256,285.665L18.373,112.464v-21.21	c0-7.767,6.319-14.086,14.086-14.086h10.481L250.59,228.515c1.612,1.175,3.51,1.763,5.41,1.763c1.9,0,3.798-0.588,5.41-1.763	L469.059,77.167h10.469c7.774,0,14.098,6.319,14.098,14.086V112.464z'
                                 fill='#333' />
                         </svg>
-                        <h4>Gmail</h4>
+                        <h4>Email</h4>
                     </EuiFlexItem>
                     <EuiFlexItem style={{ textAlign: "center" }}>
                         <svg onClick={this.onSlackIconClick} style={{ position: "relative", top: -14.68 }} className="notification-setup--icons" id='Capa_1' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' height="128px" width="128px">
@@ -95,6 +184,7 @@ export class NotificationSetup extends Component {
                         <h4>Discord</h4>
                     </EuiFlexItem>
                 </EuiFlexGroup>
+                {modal}
             </Fragment>
         )
     }
