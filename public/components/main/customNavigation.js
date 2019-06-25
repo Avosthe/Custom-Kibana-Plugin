@@ -86,7 +86,7 @@ export class CustomNavigation extends Component {
         return (
             <EuiTabbedContent
               tabs={this.tabs}
-              initialSelectedTab={this.tabs[1]}
+              initialSelectedTab={this.tabs[0]}
               expand={true}
               className="customNavigation"
             />

@@ -163,5 +163,30 @@ export default function (server) {
         });
         return resultsArray;
       }
+    },
+    {
+      path: '/api/absythe/msalerts/respond',
+      method: 'GET',
+      handler: async (request, response) => {
+        if (request.yar.get("isAuthenticated").authenticated === 0) {
+          return { error: "not authenticated" };
+        }
+        const alertId = request.query.id;
+        let respType = request.query.respType;
+        let credentials = request.yar.get("credentials");
+        const { firewallApiKey, firewallIpAddress, firewallUsername } = credentials;
+        let postObject = {
+          id: alertId,
+          apiKey: firewallApiKey,
+          firewallIP: firewallIpAddress,
+          user: firewallUsername,
+          respType: respType
+        }
+        const resp = await axios.post(`${MICROSERVICE_IP}:5020/msalerts/respond`, postObject).catch(() => { });
+        if(resp === undefined){
+          return { error: "error connecting to micro-service" };
+        }
+        return resp.data;
+      }
     }]);
 }

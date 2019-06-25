@@ -31,13 +31,26 @@ export class Alerts extends Component {
             let data = resp.data;
             if (Array.isArray(data)) {
                 this.setState({ msalerts: data, loading: false, message: "" });
-                console.log(this.state.msalerts);
             }
         });
     }
 
-    onAddressThreatClick(e) {
-        console.log(e.target.id);
+    onThreatAddressClick = async (e) => {
+        let resp = await this.httpClient.get(`../api/absythe/msalerts/respond?id=${e.target.id}&respType=address`);
+        if(resp !== undefined){
+            console.log(resp);
+        } else {
+            console.log("resp undefined");
+        }
+    }
+    
+    onThreatIgnoreClick = async (e) => {
+        let resp = await this.httpClient.get(`../api/absythe/msalerts/respond?id=${e.target.id}&respType=ignore`);
+        if(resp !== undefined){
+            console.log(resp);
+        } else {
+            console.log("resp undefined");
+        }
     }
 
     render() {
@@ -87,17 +100,17 @@ export class Alerts extends Component {
             },
             {
                 field: 'source',
-                name: 'Source IP:Port',
+                name: 'Source IP : Port',
                 render: source => {
-                    return `${source.ip}:${source.port}`;
+                    return <strong>{source.ip} : {source.port}</strong>;
                 },
                 sortable: true
             },
             {
                 field: 'destination',
-                name: 'Destination IP:Port',
+                name: 'Destination IP : Port',
                 render: destination => {
-                    return `${destination.ip}:${destination.port}`;
+                    return <strong>{destination.ip} : {destination.port}</strong>;
                 },
                 sortable: true
             },
@@ -112,11 +125,11 @@ export class Alerts extends Component {
                         return (
                             <div class="euiFlexGroup euiFlexGroup--directionRow">
                                 <div style={{ flexDirection: "row" }} class="euiFlexItem euiFlexItem--flexGrowZero">
-                                    <button id={id} onClick={this.onAddressThreatClick} class="euiButton euiButton--danger euiButton--small euiButton--fill" type="button">
-                                        <span id={id} onClick={this.onAddressThreatClick} class="euiButton__text">Address</span>
+                                    <button id={id} onClick={this.onThreatAddressClick} class="euiButton euiButton--danger euiButton--small euiButton--fill" type="button">
+                                        <span id={id} onClick={this.onThreatAddressClick} class="euiButton__text">Address</span>
                                     </button>
-                                    <button id={id} class="euiButton euiButton--primary euiButton--small euiButton--fill" type="button">
-                                        <span id={id} class="euiButton__text">Ignore</span>
+                                    <button id={id} onClick={this.onThreatIgnoreClick} class="euiButton euiButton--primary euiButton--small euiButton--fill" type="button">
+                                        <span id={id} onClick={this.onThreatIgnoreClick} class="euiButton__text">Ignore</span>
                                     </button>
                                 </div>
                             </div>
@@ -135,6 +148,7 @@ export class Alerts extends Component {
                                     <br/>
                                     <span>{`${addLeadingZero(date.getHours())}:${addLeadingZero(date.getMinutes())}:${addLeadingZero(date.getSeconds())} | ${date.toDateString()}`}</span>
                                 </p>
+                                <br/>
                                 <p>
                                     Responded by: {targetAlert.response.user}
                                 </p>
