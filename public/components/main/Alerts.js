@@ -73,7 +73,7 @@ export class Alerts extends Component {
     render() {
         const columns = [
             {
-                field: 'datetime',
+                field: 'dateTime',
                 name: 'Date Time',
                 render: datetime => {
                     let addLeadingZero = (val) => {
@@ -140,13 +140,13 @@ export class Alerts extends Component {
                     });
                     if (targetAlert.status === "pending") {
                         return (
-                            <div class="euiFlexGroup euiFlexGroup--directionRow">
-                                <div style={{ flexDirection: "row" }} class="euiFlexItem euiFlexItem--flexGrowZero">
-                                    <button id={id} onClick={this.onThreatAddressClick} class="euiButton euiButton--danger euiButton--small euiButton--fill" type="button">
-                                        <span id={id} onClick={this.onThreatAddressClick} class="euiButton__text">Address</span>
+                            <div className="euiFlexGroup euiFlexGroup--directionRow">
+                                <div style={{ flexDirection: "row" }} className="euiFlexItem euiFlexItem--flexGrowZero">
+                                    <button id={id} onClick={this.onThreatAddressClick} className="euiButton euiButton--danger euiButton--small euiButton--fill" type="button">
+                                        <span id={id} onClick={this.onThreatAddressClick} className="euiButton__text">Address</span>
                                     </button>
-                                    <button id={id} onClick={this.onThreatIgnoreClick} class="euiButton euiButton--primary euiButton--small euiButton--fill" type="button">
-                                        <span id={id} onClick={this.onThreatIgnoreClick} class="euiButton__text">Ignore</span>
+                                    <button id={id} onClick={this.onThreatIgnoreClick} className="euiButton euiButton--primary euiButton--small euiButton--fill" type="button">
+                                        <span id={id} onClick={this.onThreatIgnoreClick} className="euiButton__text">Ignore</span>
                                     </button>
                                 </div>
                             </div>

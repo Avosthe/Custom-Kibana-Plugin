@@ -18,7 +18,7 @@ export class AlertPanel extends Component {
                 content: (
                     <Fragment>
                         <EuiSpacer />
-                        <Alerts httpClient={this.httpClient} status="pending"/>
+                        <Alerts httpClient={this.httpClient} status="pending" />
                     </Fragment>
                 ),
             },
@@ -28,7 +28,7 @@ export class AlertPanel extends Component {
                 content: (
                     <Fragment>
                         <EuiSpacer />
-                        <Alerts httpClient={this.httpClient} status="addressed"/>
+                        <Alerts httpClient={this.httpClient} status="addressed" />
                     </Fragment>
                 ),
             },
@@ -38,26 +38,40 @@ export class AlertPanel extends Component {
                 content: (
                     <Fragment>
                         <EuiSpacer />
-                        <Alerts httpClient={this.httpClient} status="ignored"/>
+                        <Alerts httpClient={this.httpClient} status="ignored" />
                     </Fragment>
                 ),
             }
         ];
+        setInterval(this.refreshNotifications, 20000);
+        this.refreshNotifications();
     }
 
-    render() {
-        return (
-            <Fragment>
-                <EuiSpacer />
-                <EuiTabbedContent
-                    tabs={this.tabs}
-                    initialSelectedTab={this.tabs[0]}
-                    expand={false}
-                    className="customNavigation"
-                />
-            </Fragment>
-        )
+    refreshNotifications = async () => {
+        this.httpClient.get("../api/absythe/getNotifiableAlerts").then(resp => {
+            let data = resp.data;
+            if(data !== undefined){
+                if(data.length > 0){
+                    this.httpClient.post("../api/absythe/sendNotifications", data).then(resp => {
+                        console.log(resp.data);
+                    });
+                }
+            }
+        });
     }
-}
+        render() {
+            return (
+                <Fragment>
+                    <EuiSpacer />
+                    <EuiTabbedContent
+                        tabs={this.tabs}
+                        initialSelectedTab={this.tabs[0]}
+                        expand={false}
+                        className="customNavigation"
+                    />
+                </Fragment>
+            )
+        }
+    }
 
-export default AlertPanel
+    export default AlertPanel

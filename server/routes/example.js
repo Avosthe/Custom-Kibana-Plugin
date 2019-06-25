@@ -4,19 +4,30 @@ const { parseString } = require("xml2js");
 const https = require("https");
 const axios = require("axios");
 const { Client } = require("@elastic/elasticsearch");
+const sgMail = require("@sendgrid/mail");
 const ELASTIC_SEARCH = "http://localhost:9200";
 
-const sort_time_descending = [ { "datetime": "desc"} ];
-const custom_match = {
-    sort: sort_time_descending,
-    query: {
-        match: {
-            status: null
-        }
-    }
-};
+const SENDGRID_APIKEY = process.env.SENDGRID_APIKEY;
+sgMail.setApiKey(SENDGRID_APIKEY);
 
-const client = new Client({ node: ELASTIC_SEARCH, maxRetries: 5 });
+const sort_time_descending = [{ "dateTime": "desc" }];
+const custom_match = {
+  sort: sort_time_descending,
+  query: {
+    match: {
+      status: null
+    }
+  }
+};
+const notifiable_alerts_query = {
+  query: {
+    match: {
+      notified: false
+    }
+  }
+}
+
+const ELASTICSEARCH_CLIENT = new Client({ node: ELASTIC_SEARCH, maxRetries: 5 });
 
 
 const agent = new https.Agent({
@@ -41,10 +52,46 @@ export default function (server) {
     return `https://${firewallIpAddress}/api/?type=op&cmd=${xmlFirewallCommand}&key=${firewallApiKey}`;
   }
 
-  let getAllDocuments = async (indexName, status) => {
+  let getAllAlertsWithProvidedStatus = async (indexName, status) => {
     let body = Object.assign({}, custom_match);
     body.query.match.status = status;
-    return await client.search({ index: indexName, type: indexName, body: body });
+    return await ELASTICSEARCH_CLIENT.search({ index: indexName, type: indexName, body: body });
+  }
+
+  let getAllNotifiableAlerts = async (indexName) => {
+    return await ELASTICSEARCH_CLIENT.search({ index: indexName, type: indexName, body: notifiable_alerts_query });
+  }
+
+  let addLeadingZero = (val) => {
+    return val < 10 ? "0" + val : val;
+  }
+
+  let generateHtmlBodyFromAlerts = (alertsArray) => {
+    let htmlContent = "";
+
+    alertsArray.forEach(alert => {
+      let threatLevel = alert.threatLevel.charAt(0).toUpperCase() + alert.threatLevel.slice(1);
+      let date = new Date(alert.dateTime);
+      let dateTime = `${addLeadingZero(date.getHours())}:${addLeadingZero(date.getMinutes())}:${addLeadingZero(date.getSeconds())}<br/>${date.toDateString()}`;
+      let content =
+      `
+      <div style="margin-bottom: 20px; line-height: 25px;">
+        <strong>Date Time:  </strong><span${dateTime}</span>
+        <br/>
+        <strong>Threat Level:  </strong><span>${threatLevel}</span>
+        <br/>
+        <strong>Threat Description:  </strong><span>${alert.description}</span>
+        <br/>
+        <strong>Protocol:  </strong><span>${alert.protocol}</span>
+        <br/>
+        <strong>Source IP | Port:  </strong><span>${alert.source.ip} : ${alert.source.port}</span>
+        <br/>
+        <strong>Destination IP | Port:  </strong><span>${alert.destination.ip} : ${alert.destination.port}</span>
+      </div>
+      `;
+      htmlContent += content;
+    });
+    return htmlContent;
   }
 
   server.route([
@@ -151,12 +198,12 @@ export default function (server) {
       path: '/api/absythe/getMsAlerts',
       method: 'GET',
       handler: async (request, response) => {
-        const {status} = request.query;
-        let resp = await getAllDocuments("msalerts", status);
+        const { status } = request.query;
+        let resp = await getAllAlertsWithProvidedStatus("msalerts", status);
         if (resp === undefined) {
           return { error: "error retrieving msalerts" };
         }
-        if (resp.body.hits.total === 0){
+        if (resp.body.hits.total === 0) {
           return [];
         }
         let resultsArray = resp.body.hits.hits.map(result => {
@@ -184,7 +231,7 @@ export default function (server) {
           respType: respType
         }
         const resp = await axios.post(`${MICROSERVICE_IP}:5020/msalerts/respond`, postObject).catch(() => { });
-        if(resp === undefined){
+        if (resp === undefined) {
           return { error: "error connecting to micro-service" };
         }
         return resp.data;
@@ -202,12 +249,12 @@ export default function (server) {
       path: '/api/absythe/notificationSetup',
       method: 'POST',
       handler: async (request, response) => {
-        const {medium, id} = request.payload;
-        if(request.yar.get("notificationCredentials") === null){
+        const { medium, id } = request.payload;
+        if (request.yar.get("notificationCredentials") === null) {
           request.yar.set("notificationCredentials", {
             [medium]: id
           });
-        }else{
+        } else {
           let newCredentials = Object.assign({}, request.yar.get("notificationCredentials"));
           newCredentials = Object.assign(newCredentials, {
             [medium]: id
@@ -216,5 +263,52 @@ export default function (server) {
         }
         return request.yar.get("notificationCredentials");
       }
-    }]);
+    },
+    {
+      path: '/api/absythe/getNotifiableAlerts',
+      method: 'GET',
+      handler: async (request, response) => {
+        let resp = await getAllNotifiableAlerts("msalerts");
+        if (resp === undefined) {
+          return { error: "error retrieving notifiable msalerts" };
+        }
+        if (resp.body.hits.total === 0) {
+          return [];
+        }
+        let resultsArray = resp.body.hits.hits.map(result => {
+          return result._source;
+        });
+        return resultsArray;
+      }
+    },
+    {
+      path: '/api/absythe/sendNotifications',
+      method: 'POST',
+      handler: async (request, response) => {
+
+        let credentials = request.yar.get("notificationCredentials");
+        if (credentials === null || credentials.email === undefined) {
+          return { error: "notificationCredentials not setup, or email does not exist" };
+        }
+
+        let alertsArray = request.payload;
+        let htmlEmailContent = generateHtmlBodyFromAlerts(alertsArray);
+        let mail = {
+          to: credentials.email,
+          from: "msnotifications@absythe.me",
+          subject: 'Micro-Service Alert Notification',
+          text: "Hello World!",
+          html: htmlEmailContent,
+        }
+        sgMail.send(mail).then(resp => {
+          alertsArray.forEach(alert => {
+            alert.notified = true;
+            ELASTICSEARCH_CLIENT.update({ id: alert.id, index: "msalerts", type: "msalerts", body: { doc: alert }});
+          });
+        }).catch(err => {console.log(err.response.body.errors)});
+
+        return { success: true};
+      }
+    }
+  ]);
 }

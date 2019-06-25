@@ -47,8 +47,8 @@ export class NotificationSetup extends Component {
         }
     }
 
-    onGmailIconClick = () => {
-        this.setState({ medium: "gmail", notificationLabel: "Email Address" });
+    onEmailIconClick = () => {
+        this.setState({ medium: "email", notificationLabel: "Email Address" });
         this.getNotificationCredentials();
         this.showModal();
     }
@@ -121,7 +121,7 @@ export class NotificationSetup extends Component {
                 <EuiSpacer />
                 <EuiFlexGroup style={{ width: 600, margin: "auto" }}>
                     <EuiFlexItem style={{ textAlign: "center" }}>
-                        <svg onClick={this.onGmailIconClick} style={{ position: "relative", top: -10 }} className="notification-setup--icons" id='Layer_1' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' height="128px" width="128px">
+                        <svg onClick={this.onEmailIconClick} style={{ position: "relative", top: -10 }} className="notification-setup--icons" id='Layer_1' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' height="128px" width="128px">
                             <g fill='#f2f2f2'>
                                 <polygon points='445.244,159.1 445.244,444.019 66.756,444.019 66.756,159.1 256,297.033'
                                 />
