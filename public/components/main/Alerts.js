@@ -1,7 +1,9 @@
 import React, { Component } from 'react'
 import {
     EuiHealth,
-    EuiInMemoryTable
+    EuiInMemoryTable,
+    EuiButton,
+    EuiToolTip
 } from "@elastic/eui"
 
 export class Alerts extends Component {
@@ -19,7 +21,7 @@ export class Alerts extends Component {
         setInterval(this.getMsAlerts, 10000);
     }
 
-    componentWillReceiveProps(props){
+    componentWillReceiveProps(props) {
         this.props = props;
         this.getMsAlerts();
     }
@@ -32,6 +34,10 @@ export class Alerts extends Component {
                 console.log(this.state.msalerts);
             }
         });
+    }
+
+    onAddressThreatClick(e) {
+        console.log(e.target.id);
     }
 
     render() {
@@ -57,6 +63,7 @@ export class Alerts extends Component {
                 field: 'threatLevel',
                 name: 'Threat Level',
                 render: threatLevel => {
+                    threatLevel = threatLevel.charAt(0).toUpperCase() + threatLevel.slice(1);
                     let color;
                     switch (threatLevel) {
                         case "Low":
@@ -79,14 +86,66 @@ export class Alerts extends Component {
                 truncateText: true,
             },
             {
-                field: 'srcIp',
-                name: 'Source IP',
+                field: 'source',
+                name: 'Source IP:Port',
+                render: source => {
+                    return `${source.ip}:${source.port}`;
+                },
                 sortable: true
             },
             {
-                field: 'destIp',
-                name: 'Destination IP',
-                sortable: true,
+                field: 'destination',
+                name: 'Destination IP:Port',
+                render: destination => {
+                    return `${destination.ip}:${destination.port}`;
+                },
+                sortable: true
+            },
+            {
+                field: 'id',
+                name: 'Threat Response',
+                render: id => {
+                    let targetAlert = this.state.msalerts.find(alert => {
+                        return alert.id === id;
+                    });
+                    if (targetAlert.status === "pending") {
+                        return (
+                            <div class="euiFlexGroup euiFlexGroup--directionRow">
+                                <div style={{ flexDirection: "row" }} class="euiFlexItem euiFlexItem--flexGrowZero">
+                                    <button id={id} onClick={this.onAddressThreatClick} class="euiButton euiButton--danger euiButton--small euiButton--fill" type="button">
+                                        <span id={id} onClick={this.onAddressThreatClick} class="euiButton__text">Address</span>
+                                    </button>
+                                    <button id={id} class="euiButton euiButton--primary euiButton--small euiButton--fill" type="button">
+                                        <span id={id} class="euiButton__text">Ignore</span>
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    } else if (targetAlert.status === "addressed") {
+                        let addLeadingZero = (val) => {
+                            return val < 10 ? "0" + val : val;
+                        }
+                        let date = new Date(targetAlert.response.dateTime);
+                        return (<EuiToolTip
+                            position="top"
+                            content={
+                                <div>
+                                <p>
+                                    Responded at:
+                                    <br/>
+                                    <span>{`${addLeadingZero(date.getHours())}:${addLeadingZero(date.getMinutes())}:${addLeadingZero(date.getSeconds())} | ${date.toDateString()}`}</span>
+                                </p>
+                                <p>
+                                    Responded by: {targetAlert.response.user}
+                                </p>
+                                </div>
+                            }>
+                            <EuiButton size="s" color="secondary">
+                                Reponse Info
+                            </EuiButton>
+                        </EuiToolTip>);
+                    }
+                }
             }
         ];
 
