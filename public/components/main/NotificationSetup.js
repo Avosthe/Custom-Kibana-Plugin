@@ -24,7 +24,7 @@ export class NotificationSetup extends Component {
         this.httpClient = this.props.httpClient;
         this.state = {
             isModalVisible: false,
-            medium: null,
+            medium: "email",
             notificationLabel: null,
             id: null
         };
@@ -43,7 +43,10 @@ export class NotificationSetup extends Component {
         if(resp !== undefined){
             let data = resp.data;
             let id = data[this.state.medium];
-            this.setState( {id: id === undefined ? null : id} );
+            if(id !== undefined)
+                this.setState({id: id});
+            else
+                this.setState({id: ""})
         }
     }
 
