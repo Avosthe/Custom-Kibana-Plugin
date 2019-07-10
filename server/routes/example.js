@@ -12,6 +12,12 @@ const ELASTIC_SEARCH = "http://localhost:9200";
 const MICROSERVICE_IP = "192.168.1.20";
 const MICROSERVICE_PORT = "5020";
 const JOKE = "you're a newb thinking that you can find out the password just like that! sighh, better luck next time";
+const AUTHENTICATED = {
+  authenticated: 1
+};
+const NOT_AUTHENTICATED = {
+  authenticated: 0
+};
 
 const ELASTICSEARCH_CLIENT = new Client(
   { node: ELASTIC_SEARCH, maxRetries: 5 }
@@ -93,13 +99,13 @@ export default function (server) {
 
     let body = Object.assign({}, custom_match);
     body.query.match.status = status;
-    return await ELASTICSEARCH_CLIENT.search({ index: indexName, type: indexName, body: body });
+    return await ELASTICSEARCH_CLIENT.search({ index: indexName, type: "_doc", body: body });
 
   }
 
   let getAllNotifiableAlerts = async (indexName) => {
 
-    return await ELASTICSEARCH_CLIENT.search({ index: indexName, type: indexName, body: notifiable_alerts_query });
+    return await ELASTICSEARCH_CLIENT.search({ index: indexName, type: "_doc", body: notifiable_alerts_query });
 
   }
 
@@ -138,19 +144,21 @@ export default function (server) {
 
   }
 
+  let isAuthenticated = (request) => {
+    let isAuthenticated = request.yar.get("isAuthenticated");
+    if (isAuthenticated !== null && isAuthenticated.authenticated === 1)
+      return true;
+    else if (isAuthenticated === null)
+      request.yar.set("isAuthenticated", NOT_AUTHENTICATED);
+    return false;
+  }
+
   server.route([
     {
       path: '/api/absythe/isAuthenticated',
       method: 'GET',
       handler: (request, response) => {
-
-        let isAuthenticated = request.yar.get("isAuthenticated");
-        if (isAuthenticated !== null && isAuthenticated.authenticated === 1)
-          return { authenticated: 1 };
-        else if (isAuthenticated === null)
-          request.yar.set("isAuthenticated", { authenticated: 0 });
-        return { authenticated: 0 };
-
+        return isAuthenticated(request) ? AUTHENTICATED : NOT_AUTHENTICATED;
       }
     },
     {
@@ -165,7 +173,7 @@ export default function (server) {
         request.yar.set("credentials", credentials);
         const resp = await axios.get(`https://${firewallIpAddress}/api/?type=keygen&user=${firewallUsername}&password=${firewallPassword}`, httpsAgent).catch(() => { });
         if (resp === undefined) { // error was thrown, resp remains unassigned therefore it is undefined
-          request.yar.set("isAuthenticated", { authenticated: 0 });
+          request.yar.set("isAuthenticated", NOT_AUTHENTICATED);
           return ERROR("FIREWALL_CONNECTION_FAILED");
         }
 
@@ -176,10 +184,10 @@ export default function (server) {
               ...credentials,
               firewallApiKey: firewallApiKey
             });
-            request.yar.set("isAuthenticated", { authenticated: 1 });
+            request.yar.set("isAuthenticated", AUTHENTICATED);
           }
           else {
-            request.yar.set("isAuthenticated", { authenticated: 0 });
+            request.yar.set("isAuthenticated", NOT_AUTHENTICATED);
             invalidCredentials = true;
           }
         });
@@ -210,7 +218,7 @@ export default function (server) {
       method: 'GET',
       handler: async (request, response) => {
 
-        if (request.yar.get("isAuthenticated").authenticated === 0)
+        if (!isAuthenticated(request))
           return ERROR("NOT_AUTHENTICATED");
 
         let credentials = request.yar.get("credentials");
@@ -241,6 +249,7 @@ export default function (server) {
         const { status } = request.query;
 
         let resp = await getAllAlertsWithProvidedStatus("msalerts", status);
+        console.log(resp.body)
         if (resp === undefined)
           return ERROR("DOCUMENT_RETRIEVAL_FAILED");
         if (resp.body.hits.total === 0)
@@ -258,7 +267,7 @@ export default function (server) {
       method: 'GET',
       handler: async (request, response) => {
 
-        if (request.yar.get("isAuthenticated").authenticated === 0)
+        if (!isAuthenticated(request))
           return ERROR("NOT_AUTHENTICATED");
 
         const alertId = request.query.id;
@@ -301,7 +310,7 @@ export default function (server) {
           request.yar.set("notificationCredentials", { [medium]: id });
         else {
           let newCredentials = Object.assign({}, request.yar.get("notificationCredentials"));
-          newCredentials = Object.assign(newCredentials, { [medium]: id });
+          newCredentials = { ...newCredentials, [medium]: id  };
           request.yar.set("notificationCredentials", newCredentials);
         }
         return request.yar.get("notificationCredentials");
@@ -347,7 +356,7 @@ export default function (server) {
         sgMail.send(mail).then(resp => {
           alertsArray.forEach(alert => {
             alert.notified = true;
-            ELASTICSEARCH_CLIENT.update({ id: alert.id, index: "msalerts", type: "msalerts", body: { doc: alert } });
+            ELASTICSEARCH_CLIENT.update({ id: alert.id, index: "msalerts", type: "_doc", body: { doc: alert } });
           });
         }).catch(err => { console.log(err.response.body.errors) });
 
