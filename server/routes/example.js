@@ -1,4 +1,5 @@
 // Import requirements
+
 const { parseString } = require("xml2js");
 const { Client } = require("@elastic/elasticsearch");
 const https = require("https");
@@ -6,15 +7,21 @@ const axios = require("axios");
 const sgMail = require("@sendgrid/mail");
 
 // Defining constants, initial configuration
-let SENDGRID_APIKEY = process.env.SENDGRID_APIKEY;
-sgMail.setApiKey(SENDGRID_APIKEY);
+
 const ELASTIC_SEARCH = "http://localhost:9200";
 const MICROSERVICE_IP = "192.168.1.20";
 const MICROSERVICE_PORT = "5020";
 const JOKE = "you're a newb thinking that you can find out the password just like that! sighh, better luck next time";
+
+let SENDGRID_APIKEY = process.env.SENDGRID_APIKEY;
+sgMail.setApiKey(SENDGRID_APIKEY);
+
+// Constant Objects
+
 const AUTHENTICATED = {
   authenticated: 1
 };
+
 const NOT_AUTHENTICATED = {
   authenticated: 0
 };
@@ -249,7 +256,6 @@ export default function (server) {
         const { status } = request.query;
 
         let resp = await getAllAlertsWithProvidedStatus("msalerts", status);
-        console.log(resp.body)
         if (resp === undefined)
           return ERROR("DOCUMENT_RETRIEVAL_FAILED");
         if (resp.body.hits.total === 0)

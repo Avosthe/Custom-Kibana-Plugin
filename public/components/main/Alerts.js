@@ -113,7 +113,6 @@ export class Alerts extends Component {
             {
                 field: 'description',
                 name: 'Description',
-                truncateText: true,
             },
             {
                 field: 'source',
@@ -201,7 +200,7 @@ export class Alerts extends Component {
 
         const pagination = {
             initialPageSize: 5,
-            pageSizeOptions: [3, 5, 8],
+            pageSizeOptions: [5, 8, 10, 20, 30],
         };
 
         return (
