@@ -106,7 +106,7 @@ export default function (server) {
 
     let body = Object.assign({}, custom_match);
     body.query.match.status = status;
-    return await ELASTICSEARCH_CLIENT.search({ index: indexName, type: "_doc", body: body });
+    return await ELASTICSEARCH_CLIENT.search({ index: indexName, type: "_doc", size: 10000, body: body });
 
   }
 
@@ -260,12 +260,10 @@ export default function (server) {
           return ERROR("DOCUMENT_RETRIEVAL_FAILED");
         if (resp.body.hits.total === 0)
           return [];
-
         let resultsArray = resp.body.hits.hits.map(result => {
           return result._source;
         });
         return resultsArray;
-
       }
     },
     {
